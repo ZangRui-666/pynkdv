@@ -41,10 +41,10 @@ qgs.exitQgis()
 """
 
 
-def setPath(qgs_path, processing_path):
-    QgsApplication.setPrefixPath(qgs_path, True)
-    qgs = QgsApplication([], False)
-    qgs.initQgis()
+def setPath(processing_path):
+    # QgsApplication.setPrefixPath(qgs_path, True)
+    # qgs = QgsApplication([], False)
+    # qgs.initQgis()
     for i in processing_path:
         sys.path.append(i)
     #
@@ -157,7 +157,6 @@ def merge(edges_df, dis_df, nodes_num):
                 # write each item on a new line
                 fp.write(" %s" % str(list_in[i]))
             fp.write("\n")
-        fp.close()
         print('Done')
 
 
@@ -169,7 +168,7 @@ def buildGraphFromPoints(path_from):
     points_list = [Point((lng, lat)) for lat, lng in zip(latitudes, longitudes)]  # turn into shapely geometry
     points = gpd.GeoSeries(points_list,
                            crs='epsg:4326')  # turn into geoseries, with default crs, i.e., ox.settings.default_crs
-    points.to_file('results/points_layer.gpkg')
+    points.to_file('points_layer.gpkg')
 
 
 def add_kd_value(gdf, value_se, to_file):
@@ -196,7 +195,7 @@ def map_road_network(location_data):
     # qgs.initQgis()
     Processing.initialize()
 
-    data_arr = np.genfromtxt(location_data, delimiter=' ', max_rows=100)
+    data_arr = np.genfromtxt(location_data, delimiter=' ')
     data_df = pd.DataFrame(data_arr, columns=['lon', 'lat'])
     # data cleaning
     data_df = data_df[(np.abs(stats.zscore(data_df)) < 3).all(axis=1)]
@@ -214,14 +213,14 @@ def map_road_network(location_data):
     fix_direction(g)
     print('2')
     edge_df = process_edges(g)
-    geo_path_1 = 'results/.gpkg/' + 'geo1.gpkg'
+    geo_path_1 = 'geo1.gpkg'
     ox.save_graph_geopackage(g, geo_path_1)
     df1 = gpd.read_file(geo_path_1, layer='edges')
-    geo_path_2 = 'results/simplified_gpkg/' + 'simplified' + '.gpkg'
+    geo_path_2 = 'simplified.gpkg'
     df1 = df1[['geometry']]
     df1.to_file(geo_path_2, driver='GPKG', layer='edges')
 
-    added_geometry_filename = '/Users/patrick/Desktop/qgis/add_geometry_.shp'
+    added_geometry_filename = 'add_geometry.shp'
     processing.run("qgis:exportaddgeometrycolumns",
                    {'INPUT': geo_path_2 + '|layername=edges', 'CALC_METHOD': 0, 'OUTPUT': added_geometry_filename})
 
@@ -230,7 +229,7 @@ def map_road_network(location_data):
 
     distance_df = project_data_points_and_generate_layer(g, data_arr)
     merge(edge_df, distance_df, nodes_num)
-    road_data = [geo_path_2, 'test_write_file']
+    road_data = [geo_path_2, 'test_write_file2']
     return road_data
 
 
@@ -251,7 +250,8 @@ class PyNKDV:
 
     def compute(self):
         Processing.initialize()
-        qgis_split_output = '/Users/patrick/Desktop/qgis/split_by_qgis/split.shp'
+        qgis_split_output = 'split_by_qgis.shp'
+        print(self.graph_path)
         processing.run("native:splitlinesbylength", {
             'INPUT': self.graph_path + '|layername=edges',
             'LENGTH': self.lixel_size, 'OUTPUT': qgis_split_output})
